@@ -3,13 +3,13 @@ import asyncio
 import json
 
 from websockets.exceptions import ConnectionClosedOK, ConnectionClosedError
-from websockets.sync.server import WebSocketServerProtocol
+from fastapi import WebSocket
 
 class TriggerInterface:
     def __init__(self):
-        self.active_connections: List[WebSocketServerProtocol] = []
+        self.active_connections: List[WebSocket] = []
 
-    async def connect(self, websocket: WebSocketServerProtocol):
+    async def connect(self, websocket: WebSocket):
         self.active_connections.append(websocket)
         try:
             await websocket.wait_closed()

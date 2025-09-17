@@ -60,7 +60,8 @@ body {
     border-color: #0056b3;
 }
 
-#upload-status {
+#upload-status,
+#youtube-status {
     margin-top: 10px;
     font-size: 0.9em;
     color: #ccc;
@@ -86,16 +87,31 @@ body {
     margin-right: 10px;
 }
 
-.play-button {
+.play-button,
+.delete-button {
     padding: 5px 10px;
+    font-size: 0.8em;
+    margin-left: 5px;
+}
+
+.play-button {
     background-color: #28a745;
     border-color: #28a745;
-    font-size: 0.8em;
 }
 
 .play-button:hover {
     background-color: #218838;
     border-color: #218838;
+}
+
+.delete-button {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+.delete-button:hover {
+    background-color: #c82333;
+    border-color: #c82333;
 }
 
 .lyric-container {

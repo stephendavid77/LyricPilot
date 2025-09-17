@@ -10,11 +10,8 @@ from .config import SONGS_DIR, UPLOAD_DIR
 from .database import add_song, update_song_processed_status
 from .lyrics_text_parser import parse_plain_text_lyrics, generate_basic_timecodes_from_text
 from .timecode_generator import save_timecode_json
-
-# Placeholder imports for other aligners/parsers
-# from .audio_aligner import process_audio_file
-# from .midi_aligner import process_midi_file
-# from .musicxml_parser import process_musicxml_file
+from .musicxml_parser import parse_musicxml
+from .midi_aligner import process_midi_file
 
 async def upload_and_process_song(db, file: UploadFile, title: Optional[str] = None):
     song_id = str(uuid4())
@@ -27,7 +24,7 @@ async def upload_and_process_song(db, file: UploadFile, title: Optional[str] = N
     raw_files_dir = os.path.join(song_dir, "raw")
     os.makedirs(raw_files_dir, exist_ok=True)
 
-    # Save the uploaded file
+    # Save the uploaded file first
     file_extension = Path(file.filename).suffix.lower()
     saved_file_path = os.path.join(raw_files_dir, file.filename)
     with open(saved_file_path, "wb") as buffer:
@@ -39,7 +36,7 @@ async def upload_and_process_song(db, file: UploadFile, title: Optional[str] = N
     timecode_path = os.path.join(song_dir, "timecode.json")
     processed = False
 
-    # Determine file type and process
+    # Determine file type and process from the saved file
     if file_extension in ['.mp3', '.wav']:
         # Placeholder for audio processing
         # timecode_data = process_audio_file(saved_file_path)
@@ -59,21 +56,21 @@ async def upload_and_process_song(db, file: UploadFile, title: Optional[str] = N
             print("No dummy lyrics file found for audio. Song not fully processed.")
 
     elif file_extension in ['.mid', '.midi']:
-        # Placeholder for MIDI processing
-        # timecode_data = process_midi_file(saved_file_path)
-        # save_timecode_json(timecode_path, timecode_data)
-        # processed = True
-        print(f"MIDI file {file.filename} uploaded. MIDI processing is a placeholder.")
+        print(f"MIDI file {file.filename} uploaded. Processing...")
+        timecode_data = process_midi_file(saved_file_path)
+        save_timecode_json(timecode_path, timecode_data)
+        processed = True
 
     elif file_extension in ['.xml', '.musicxml']:
-        # Placeholder for MusicXML processing
-        # timecode_data = process_musicxml_file(saved_file_path)
-        # save_timecode_json(timecode_path, timecode_data)
-        # processed = True
-        print(f"MusicXML file {file.filename} uploaded. MusicXML processing is a placeholder.")
+        print(f"MusicXML file {file.filename} uploaded. Processing...")
+        timecode_data = parse_musicxml(saved_file_path)
+        save_timecode_json(timecode_path, timecode_data)
+        processed = True
 
     elif file_extension == '.txt':
-        lyrics_lines = parse_plain_text_lyrics(await file.read()) # Read content again as text
+        with open(saved_file_path, 'r', encoding='utf-8') as f:
+            lyrics_text = f.read()
+        lyrics_lines = parse_plain_text_lyrics(lyrics_text)
         timecode_data = generate_basic_timecodes_from_text(lyrics_lines)
         save_timecode_json(timecode_path, timecode_data)
         processed = True

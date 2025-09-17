@@ -5,10 +5,6 @@ const nextLyricElements = [
     document.querySelector('.next-3'),
 ];
 
-const songListElement = document.getElementById('song-list');
-const uploadForm = document.getElementById('upload-form');
-const uploadStatus = document.getElementById('upload-status');
-
 const websocket = new WebSocket("ws://localhost:8000/ws"); // Adjust if your backend is on a different host/port
 
 let currentSongTimecodes = [];
@@ -112,6 +108,13 @@ function updateLyricDisplay(currentTime) {
 }
 
 // --- Song Management Logic ---
+// These variables and event listeners need to be initialized after DOM is loaded
+let songListElement;
+let uploadForm;
+let uploadStatus;
+let youtubeForm;
+let youtubeStatus;
+
 async function fetchSongs() {
     try {
         const response = await fetch('/songs');
@@ -134,6 +137,7 @@ function displaySongs(songs) {
         listItem.innerHTML = `
             <span>${song.title} (ID: ${song.id})</span>
             <button data-song-id="${song.id}" class="play-button">Play</button>
+            <button data-song-id="${song.id}" class="delete-button">Delete</button>
         `;
         songListElement.appendChild(listItem);
     });
@@ -143,6 +147,16 @@ function displaySongs(songs) {
         button.addEventListener('click', async (event) => {
             const songId = event.target.dataset.songId;
             await playSong(songId);
+        });
+    });
+
+    // Add event listeners to delete buttons
+    document.querySelectorAll('.delete-button').forEach(button => {
+        button.addEventListener('click', async (event) => {
+            const songId = event.target.dataset.songId;
+            if (confirm(`Are you sure you want to delete song "${songId}"?`)) {
+                await deleteSong(songId);
+            }
         });
     });
 }
@@ -167,40 +181,105 @@ async function playSong(songId) {
     }
 }
 
-uploadForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    uploadStatus.textContent = 'Uploading...';
-
-    const fileInput = document.getElementById('song-file');
-    const titleInput = document.getElementById('song-title');
-
-    const formData = new FormData();
-    formData.append('file', fileInput.files[0]);
-    if (titleInput.value) {
-        formData.append('title', titleInput.value);
-    }
-
+async function deleteSong(songId) {
     try {
-        const response = await fetch('/songs', {
-            method: 'POST',
-            body: formData,
+        const response = await fetch(`/songs/${songId}`, {
+            method: 'DELETE',
+            headers: {
+                'Accept': 'application/json',
+            },
         });
         const result = await response.json();
-
         if (response.ok) {
-            uploadStatus.textContent = `Upload successful: ${result.title} (ID: ${result.song_id})`;
-            fileInput.value = ''; // Clear file input
-            titleInput.value = ''; // Clear title input
+            console.log(result.message);
             fetchSongs(); // Refresh song list
         } else {
-            uploadStatus.textContent = `Upload failed: ${result.detail || response.statusText}`;
-            console.error("Upload error:", result);
+            console.error("Error deleting song:", result.detail);
         }
     } catch (error) {
-        uploadStatus.textContent = `Upload failed: ${error.message}`;
-        console.error("Upload error:", error);
+        console.error("Error deleting song:", error);
     }
-});
+}
 
-// Initial fetch of songs when the page loads
-document.addEventListener('DOMContentLoaded', fetchSongs);
+// Initial setup when the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', () => {
+    songListElement = document.getElementById('song-list');
+    uploadForm = document.getElementById('upload-form');
+    uploadStatus = document.getElementById('upload-status');
+    youtubeForm = document.getElementById('youtube-form');
+    youtubeStatus = document.getElementById('youtube-status');
+
+    uploadForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        uploadStatus.textContent = 'Uploading...';
+
+        const fileInput = document.getElementById('song-file');
+        const titleInput = document.getElementById('song-title');
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        if (titleInput.value) {
+            formData.append('title', titleInput.value);
+        }
+
+        try {
+            const response = await fetch('/songs', {
+                method: 'POST',
+                body: formData,
+            });
+            const result = await response.json();
+
+            if (response.ok) {
+                uploadStatus.textContent = `Upload successful: ${result.title} (ID: ${result.song_id})`;
+                fileInput.value = ''; // Clear file input
+                titleInput.value = ''; // Clear title input
+                fetchSongs(); // Refresh song list
+            } else {
+                uploadStatus.textContent = `Upload failed: ${result.detail || response.statusText}`;
+                console.error("Upload error:", result);
+            }
+        } catch (error) {
+            uploadStatus.textContent = `Upload failed: ${error.message}`;
+            console.error("Upload error:", error);
+        }
+    });
+
+    youtubeForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        youtubeStatus.textContent = 'Processing YouTube URL...';
+
+        const youtubeUrlInput = document.getElementById('youtube-url');
+        const youtubeTitleInput = document.getElementById('youtube-title');
+
+        const formData = new FormData();
+        formData.append('youtube_url', youtubeUrlInput.value);
+        if (youtubeTitleInput.value) {
+            formData.append('title', youtubeTitleInput.value);
+        }
+
+        try {
+            const response = await fetch('/songs/from_youtube', {
+                method: 'POST',
+                body: formData,
+            });
+            const result = await response.json();
+
+            if (response.ok) {
+                youtubeStatus.textContent = `Processing initiated for: ${result.youtube_url} (ID: ${result.song_id}). This may take a few minutes.`;
+                youtubeUrlInput.value = ''; // Clear input
+                youtubeTitleInput.value = ''; // Clear input
+                // Poll for song status or rely on manual refresh for now
+                setTimeout(fetchSongs, 5000); // Refresh song list after a delay
+            } else {
+                youtubeStatus.textContent = `Processing failed: ${result.detail || response.statusText}`;
+                console.error("YouTube processing error:", result);
+            }
+        } catch (error) {
+            youtubeStatus.textContent = `Processing failed: ${error.message}`;
+            console.error("YouTube processing error:", error);
+        }
+    });
+
+    // Initial fetch of songs when the page loads
+    fetchSongs();
+});

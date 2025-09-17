@@ -5,6 +5,8 @@ LyricPilot is a modular Python project designed for real-time display of lyrics,
 ## Functionality Overview
 
 -   **Song Upload & Preprocessing:** Supports uploading audio (MP3/WAV), MIDI, MusicXML, or plain text lyrics. Automatically detects file type and initiates processing to generate a standard `timecode.json` for each song.
+-   **MIDI Processing:** Implemented to parse MIDI files and extract timecodes for note/rest onsets.
+-   **MusicXML Parsing:** Implemented to parse MusicXML files for precise timecode generation, including lyrics and timing from musical notation.
 -   **Real-Time Display:** A browser-based frontend displays current and upcoming lyric lines, updating in real-time via WebSockets.
 -   **Song Management:** A REST API allows listing, fetching, uploading, and deleting songs, with metadata stored in an SQLite database.
 -   **Extendable Trigger Interface:** Designed to easily send lyric events to the web frontend and can be extended for other stage systems (e.g., ProPresenter via OSC/MIDI).
@@ -89,10 +91,17 @@ When you upload a single file (audio, MIDI, MusicXML, or plain lyrics text), her
         *   **Fallback for Audio:** If you also upload a plain `.txt` file with the *same base name* as your audio file (e.g., `mysong.mp3` and `mysong.txt`), the system will use the `.txt` file to generate basic timecodes (assuming a 3-minute duration for the audio).
         *   If no companion `.txt` file is found, the song will remain `processed=False` in the database, and no `timecode.json` will be generated from the audio itself.
 
-    *   **For MIDI (`.mid`, `.midi`) and MusicXML (`.xml`, `.musicxml`) files:**
+    *   **For MIDI (`.mid`, `.midi`) files:**
         *   The file is saved.
-        *   **Important:** The processing for MIDI and MusicXML (extracting notes, tempo, lyrics using `mido` or `music21`) is currently a **placeholder**.
-        *   No `timecode.json` is generated from these files in the current prototype, and the song will remain `processed=False` in the database.
+        *   The system parses the MIDI file to extract timecodes for note/rest onsets using `music21`.
+        *   This `timecode.json` is saved to `data/songs/<song_id>/timecode.json`.
+        *   The song's status in the database is updated to `processed=True`.
+
+    *   **For MusicXML (`.xml`, `.musicxml`) files:**
+        *   The file is saved.
+        *   The system parses the MusicXML file to extract time-aligned lyrics using `music21`.
+        *   This `timecode.json` is saved to `data/songs/<song_id>/timecode.json`.
+        *   The song's status in the database is updated to `processed=True`.
 
 7.  **Final Database Update:** The song's entry in the SQLite database is updated with its final `processed` status and the path to the `timecode.json` (if one was generated).
 
@@ -132,4 +141,5 @@ Use the new `/play_song/{song_id}` endpoint to tell the backend which song to di
 
 -   **Backend:** Python, FastAPI, SQLAlchemy (SQLite), WebSockets
 -   **Frontend:** HTML, CSS, JavaScript
--   **Potential Libraries:** `librosa`, `mido`, `music21`, `sounddevice`, `pyaudio`
+-   **Core Libraries:** `music21`
+-   **Potential Libraries:** `librosa`, `mido`, `sounddevice`, `pyaudio`

@@ -29,14 +29,6 @@ def on_startup():
     os.makedirs(SONGS_DIR, exist_ok=True)
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     preload_example_song()
-    # Automatically start playback for the example song after a short delay
-    # This ensures the frontend receives the song_start message on connection
-    async def _auto_start_example_song():
-        await asyncio.sleep(1) # Give websockets a moment to connect
-        db = next(get_db())
-        await _send_song_start_to_clients("amazing_grace", db)
-        db.close()
-    asyncio.create_task(_auto_start_example_song())
 
 def preload_example_song():
     db = next(get_db())
@@ -160,6 +152,10 @@ async def delete_song_endpoint(song_id: str, db: Session = Depends(get_db)):
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     trigger_interface.active_connections.append(websocket)
+    # Send song_start message to the newly connected client
+    db = next(get_db())
+    await _send_song_start_to_clients("amazing_grace", db)
+    db.close()
     try:
         while True:
             # Keep connection alive, or handle incoming messages if any

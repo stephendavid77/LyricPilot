@@ -13,8 +13,9 @@ To develop a modular, real-time lyrics display system capable of synchronizing l
 -   **Database:** SQLite (via SQLAlchemy ORM)
 -   **File Handling:** `python-multipart`
 -   **Asynchronous Operations:** `asyncio`
+-   **MusicXML/MIDI Processing:** `music21`
 -   **Frontend:** HTML, CSS, JavaScript
--   **Placeholder Libraries (for future integration):** `librosa`, `mido`, `music21`, `sounddevice`, `pyaudio`
+-   **Placeholder Libraries (for future integration):** `librosa`, `mido`, `sounddevice`, `pyaudio`
 
 ## 3. Architectural Decisions
 
@@ -32,8 +33,8 @@ To develop a modular, real-time lyrics display system capable of synchronizing l
 -   `backend/lyrics_text_parser.py`: Parses plain text lyrics and generates basic timecodes.
 -   `backend/song_loader.py`: Handles file uploads, type detection, and delegates to appropriate processing modules.
 -   `backend/audio_aligner.py`: Placeholder for audio processing (e.g., `librosa`).
--   `backend/midi_aligner.py`: Placeholder for MIDI parsing (e.g., `mido`, `music21`).
--   `backend/musicxml_parser.py`: Placeholder for MusicXML parsing (e.g., `music21`).
+-   `backend/midi_aligner.py`: Parses MIDI files and extracts timecodes for note/rest onsets using `music21`.
+-   `backend/musicxml_parser.py`: Parses MusicXML files and extracts time-aligned lyrics using `music21`.
 -   `backend/trigger_interface.py`: Manages active WebSocket connections and sends messages to clients.
 -   `backend/audio_input.py`: Placeholder for live microphone input.
 -   `backend/beat_detector.py`: Placeholder for real-time beat detection.
@@ -56,7 +57,7 @@ To develop a modular, real-time lyrics display system capable of synchronizing l
 
 ## 7. Known Limitations & Future Work (as of last update)
 
--   **Processing Modules are Placeholders:** `audio_aligner.py`, `midi_aligner.py`, `musicxml_parser.py`, `audio_input.py`, `beat_detector.py`, `lyric_scheduler.py` currently contain only basic or dummy implementations. Full integration of libraries like `librosa`, `mido`, `music21`, `sounddevice`, `pyaudio` is pending.
+-   **Processing Modules are Placeholders:** `audio_aligner.py`, `audio_input.py`, `beat_detector.py`, `lyric_scheduler.py` currently contain only basic or dummy implementations. Full integration of libraries like `librosa`, `sounddevice`, `pyaudio` is pending.
 -   **Manual Alignment:** No UI for manual lyric alignment is implemented.
 -   **ProPresenter/OSC/MIDI:** Integration with external stage systems is planned but not yet implemented.
 -   **Error Handling:** While basic error handling is present, more robust error reporting and user feedback mechanisms could be added.

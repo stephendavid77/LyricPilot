@@ -5,6 +5,10 @@ const nextLyricElements = [
     document.querySelector('.next-3'),
 ];
 
+const songListElement = document.getElementById('song-list');
+const uploadForm = document.getElementById('upload-form');
+const uploadStatus = document.getElementById('upload-status');
+
 const websocket = new WebSocket("ws://localhost:8000/ws"); // Adjust if your backend is on a different host/port
 
 let currentSongTimecodes = [];
@@ -12,6 +16,7 @@ let currentLyricIndex = -1;
 let playbackStartTime = 0;
 let animationFrameId = null;
 
+// --- WebSocket Logic ---
 websocket.onopen = (event) => {
     console.log("WebSocket connected!");
 };
@@ -22,7 +27,6 @@ websocket.onmessage = (event) => {
         console.log("Received message:", message);
 
         if (message.type === "lyric_update") {
-            // This path is for manual triggers or future real-time audio input
             const { current_lyric, next_lyrics } = message.data;
             updateLyrics(current_lyric, next_lyrics);
         } else if (message.type === "song_start") {
@@ -55,6 +59,7 @@ websocket.onerror = (error) => {
     }
 };
 
+// --- Lyric Display Logic ---
 function updateLyrics(currentLyric, nextLyrics) {
     currentLyricElement.textContent = currentLyric || '';
 
@@ -105,3 +110,97 @@ function updateLyricDisplay(currentTime) {
         }
     }
 }
+
+// --- Song Management Logic ---
+async function fetchSongs() {
+    try {
+        const response = await fetch('/songs');
+        const songs = await response.json();
+        displaySongs(songs);
+    } catch (error) {
+        console.error("Error fetching songs:", error);
+    }
+}
+
+function displaySongs(songs) {
+    songListElement.innerHTML = ''; // Clear existing list
+    if (songs.length === 0) {
+        songListElement.innerHTML = '<li>No songs uploaded yet.</li>';
+        return;
+    }
+
+    songs.forEach(song => {
+        const listItem = document.createElement('li');
+        listItem.innerHTML = `
+            <span>${song.title} (ID: ${song.id})</span>
+            <button data-song-id="${song.id}" class="play-button">Play</button>
+        `;
+        songListElement.appendChild(listItem);
+    });
+
+    // Add event listeners to play buttons
+    document.querySelectorAll('.play-button').forEach(button => {
+        button.addEventListener('click', async (event) => {
+            const songId = event.target.dataset.songId;
+            await playSong(songId);
+        });
+    });
+}
+
+async function playSong(songId) {
+    try {
+        const response = await fetch(`/play_song/${songId}`, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+            },
+        });
+        const result = await response.json();
+        if (response.ok) {
+            console.log(result.message);
+            // The song_start message will come via WebSocket
+        } else {
+            console.error("Error playing song:", result.detail);
+        }
+    } catch (error) {
+        console.error("Error playing song:", error);
+    }
+}
+
+uploadForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    uploadStatus.textContent = 'Uploading...';
+
+    const fileInput = document.getElementById('song-file');
+    const titleInput = document.getElementById('song-title');
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    if (titleInput.value) {
+        formData.append('title', titleInput.value);
+    }
+
+    try {
+        const response = await fetch('/songs', {
+            method: 'POST',
+            body: formData,
+        });
+        const result = await response.json();
+
+        if (response.ok) {
+            uploadStatus.textContent = `Upload successful: ${result.title} (ID: ${result.song_id})`;
+            fileInput.value = ''; // Clear file input
+            titleInput.value = ''; // Clear title input
+            fetchSongs(); // Refresh song list
+        } else {
+            uploadStatus.textContent = `Upload failed: ${result.detail || response.statusText}`;
+            console.error("Upload error:", result);
+        }
+    } catch (error) {
+        uploadStatus.textContent = `Upload failed: ${error.message}`;
+        console.error("Upload error:", error);
+    }
+});
+
+// Initial fetch of songs when the page loads
+document.addEventListener('DOMContentLoaded', fetchSongs);

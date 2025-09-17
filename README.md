@@ -32,7 +32,7 @@ To get LyricPilot up and running, follow these steps:
 
 ## How to Configure (Upload) a New Song
 
-Use `curl` to upload your song files to the backend.
+This process uses the backend's REST API to upload your song files.
 
 1.  **Prepare your song file:** Have your audio (MP3/WAV), MIDI, MusicXML, or plain text lyrics (`.txt`) file ready.
 
@@ -63,6 +63,39 @@ Use `curl` to upload your song files to the backend.
         *   Replace `My Audio Song` with the desired title.
 
 4.  **Note down the `song_id`** from the server's JSON response. You will need this to play the song.
+
+### What Happens When You Upload a Song?
+
+When you upload a single file (audio, MIDI, MusicXML, or plain lyrics text), here's a step-by-step breakdown of what happens in the backend:
+
+1.  **File Reception:** Your file is received by the FastAPI backend at the `/songs` endpoint.
+2.  **Unique ID Generation:** A unique `song_id` (a UUID string) is generated for your song.
+3.  **Directory Creation:** A new directory structure is created for your song: `data/songs/<song_id>/raw/`.
+4.  **File Storage:** Your original uploaded file is saved into the `data/songs/<song_id>/raw/` directory.
+5.  **Database Entry:** An initial entry for your song is added to the SQLite database, marking it as `processed=False` and storing its title and file path.
+
+6.  **Type-Specific Processing:**
+
+    *   **For Plain Lyrics Text (`.txt` files):**
+        *   The content of your `.txt` file is read.
+        *   The system parses the text into individual lyric lines.
+        *   It then generates a `timecode.json` file. In the current prototype, this assigns a `time` of `0.0` seconds to each lyric line, meaning they will appear sequentially without specific timing, or if a `total_duration` is provided (which it isn't for direct `.txt` uploads), it would space them evenly.
+        *   This `timecode.json` is saved to `data/songs/<song_id>/timecode.json`.
+        *   The song's status in the database is updated to `processed=True`.
+
+    *   **For Audio (`.mp3`, `.wav`) files:**
+        *   The audio file is saved.
+        *   **Important:** The audio processing (extracting tempo, beats, and timings using `librosa`) is currently a **placeholder**.
+        *   **Fallback for Audio:** If you also upload a plain `.txt` file with the *same base name* as your audio file (e.g., `mysong.mp3` and `mysong.txt`), the system will use the `.txt` file to generate basic timecodes (assuming a 3-minute duration for the audio).
+        *   If no companion `.txt` file is found, the song will remain `processed=False` in the database, and no `timecode.json` will be generated from the audio itself.
+
+    *   **For MIDI (`.mid`, `.midi`) and MusicXML (`.xml`, `.musicxml`) files:**
+        *   The file is saved.
+        *   **Important:** The processing for MIDI and MusicXML (extracting notes, tempo, lyrics using `mido` or `music21`) is currently a **placeholder**.
+        *   No `timecode.json` is generated from these files in the current prototype, and the song will remain `processed=False` in the database.
+
+7.  **Final Database Update:** The song's entry in the SQLite database is updated with its final `processed` status and the path to the `timecode.json` (if one was generated).
+
 
 ## How to Choose Which Song's Lyrics are Displayed
 

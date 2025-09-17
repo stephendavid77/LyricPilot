@@ -7,12 +7,30 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="lyric-container">
-        <div id="current-lyric" class="lyric current"></div>
-        <div id="next-lyrics" class="lyric-queue">
-            <div class="lyric next-1"></div>
-            <div class="lyric next-2"></div>
-            <div class="lyric next-3"></div>
+    <div class="container">
+        <div class="song-management">
+            <h2>Lyric Pilot</h2>
+
+            <h3>Upload New Song Artifact</h3>
+            <p>Upload a single file for a new song. Accepted types: Audio (.mp3, .wav), MIDI (.mid, .midi), MusicXML (.xml, .musicxml), or plain lyrics text (.txt).</p>
+            <form id="upload-form" enctype="multipart/form-data">
+                <input type="file" id="song-file" name="file" required>
+                <input type="text" id="song-title" name="title" placeholder="Song Title (optional)">
+                <button type="submit">Upload Song</button>
+            </form>
+            <p id="upload-status"></p>
+
+            <h3>Available Songs</h3>
+            <ul id="song-list"></ul>
+        </div>
+
+        <div class="lyric-container">
+            <div id="current-lyric" class="lyric current"></div>
+            <div id="next-lyrics" class="lyric-queue">
+                <div class="lyric next-1"></div>
+                <div class="lyric next-2"></div>
+                <div class="lyric next-3"></div>
+            </div>
         </div>
     </div>
 

@@ -17,37 +17,51 @@ class TriggerInterface:
         except (ConnectionClosedOK, ConnectionClosedError):
             pass
         finally:
-            self.active_connections.remove(websocket)
+            if websocket in self.active_connections:
+                self.active_connections.remove(websocket)
             print(f"WebSocket disconnected: {websocket.client}")
 
     async def send_lyric_update(self, lyric_data: dict):
         message_dict = {"type": "lyric_update", "data": lyric_data}
         print(f"Sending lyric update to {len(self.active_connections)} connections.")
-        for connection in self.active_connections:
+        # Create a copy of the list to iterate over, as we might modify the original
+        connections_to_remove = []
+        for connection in list(self.active_connections):
             try:
                 await connection.send_json(message_dict)
-            except (ConnectionClosedOK, ConnectionClosedError):
-                print(f"Failed to send to {connection.client}, connection closed.")
-                pass
+            except (ConnectionClosedOK, ConnectionClosedError, RuntimeError) as e:
+                print(f"Failed to send to {connection.client} (Error: {e}). Removing connection.")
+                connections_to_remove.append(connection)
+        for conn in connections_to_remove:
+            if conn in self.active_connections:
+                self.active_connections.remove(conn)
 
     async def send_song_start(self, song_id: str, title: str, timecodes: List[dict]):
         message_dict = {"type": "song_start", "data": {"song_id": song_id, "title": title, "timecodes": timecodes}}
         print(f"Sending song_start for {title} to {len(self.active_connections)} connections.")
-        for connection in self.active_connections:
+        connections_to_remove = []
+        for connection in list(self.active_connections):
             try:
                 await connection.send_json(message_dict)
-            except (ConnectionClosedOK, ConnectionClosedError):
-                print(f"Failed to send to {connection.client}, connection closed.")
-                pass
+            except (ConnectionClosedOK, ConnectionClosedError, RuntimeError) as e:
+                print(f"Failed to send to {connection.client} (Error: {e}). Removing connection.")
+                connections_to_remove.append(connection)
+        for conn in connections_to_remove:
+            if conn in self.active_connections:
+                self.active_connections.remove(conn)
 
     async def send_message(self, message_type: str, data: dict):
         message_dict = {"type": message_type, "data": data}
         print(f"Sending generic message '{message_type}' to {len(self.active_connections)} connections.")
-        for connection in self.active_connections:
+        connections_to_remove = []
+        for connection in list(self.active_connections):
             try:
                 await connection.send_json(message_dict)
-            except (ConnectionClosedOK, ConnectionClosedError):
-                print(f"Failed to send to {connection.client}, connection closed.")
-                pass
+            except (ConnectionClosedOK, ConnectionClosedError, RuntimeError) as e:
+                print(f"Failed to send to {connection.client} (Error: {e}). Removing connection.")
+                connections_to_remove.append(connection)
+        for conn in connections_to_remove:
+            if conn in self.active_connections:
+                self.active_connections.remove(conn)
 
 trigger_interface = TriggerInterface()

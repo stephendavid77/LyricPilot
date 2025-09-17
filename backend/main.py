@@ -152,10 +152,6 @@ async def delete_song_endpoint(song_id: str, db: Session = Depends(get_db)):
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     trigger_interface.active_connections.append(websocket)
-    # Send song_start message to the newly connected client
-    db = next(get_db())
-    await _send_song_start_to_clients("amazing_grace", db)
-    db.close()
     try:
         while True:
             # Keep connection alive, or handle incoming messages if any
@@ -209,3 +205,14 @@ async def _send_song_start_to_clients(song_id: str, db: Session):
 async def start_song_playback_endpoint(song_id: str, db: Session = Depends(get_db)):
     await _send_song_start_to_clients(song_id, db)
     return {"message": f"Playback started for {song_id}"}
+
+@app.post("/play_song/{song_id}", response_model=dict)
+async def play_song_endpoint(song_id: str, db: Session = Depends(get_db)):
+    song = get_song(db, song_id)
+    if not song:
+        raise HTTPException(status_code=404, detail="Song not found")
+    if not song.processed or not song.timecode_path:
+        raise HTTPException(status_code=400, detail="Song not processed for playback")
+
+    await _send_song_start_to_clients(song_id, db)
+    return {"message": f"Initiated playback for song ID: {song_id}"}

@@ -5,12 +5,22 @@ const nextLyricElements = [
     document.querySelector('.next-3'),
 ];
 
+// Declare variables at a higher scope
+let songListElement;
+let uploadForm;
+let uploadStatus;
+let youtubeForm;
+let youtubeStatus;
+let playPauseButton;
+
 const websocket = new WebSocket("ws://localhost:8000/ws"); // Adjust if your backend is on a different host/port
 
 let currentSongTimecodes = [];
 let currentLyricIndex = -1;
 let playbackStartTime = 0;
 let animationFrameId = null;
+let isPlaying = true; // New state variable
+let lastFrameTime = 0; // To calculate elapsed time during pause/resume
 
 // --- WebSocket Logic ---
 websocket.onopen = (event) => {
@@ -30,7 +40,13 @@ websocket.onmessage = (event) => {
             console.log(`Starting song: ${title} (${song_id})`);
             currentSongTimecodes = timecodes.sort((a, b) => a.time - b.time);
             currentLyricIndex = -1;
-            playbackStartTime = performance.now(); // Start client-side timer
+            
+            // Reset playback state and start/resume
+            isPlaying = true;
+            playPauseButton.textContent = 'Pause';
+            playbackStartTime = performance.now(); // Reset start time for new song
+            lastFrameTime = playbackStartTime;
+
             if (animationFrameId) {
                 cancelAnimationFrame(animationFrameId);
             }
@@ -65,6 +81,16 @@ function updateLyrics(currentLyric, nextLyrics) {
 }
 
 function updateLyricDisplay(currentTime) {
+    if (!isPlaying) {
+        lastFrameTime = currentTime; // Update lastFrameTime when paused
+        animationFrameId = requestAnimationFrame(updateLyricDisplay); // Keep requesting frames to check for resume
+        return;
+    }
+
+    const deltaTime = currentTime - lastFrameTime; // Time elapsed since last frame
+    playbackStartTime += deltaTime; // Adjust playbackStartTime to account for paused time
+    lastFrameTime = currentTime; // Update lastFrameTime for next frame
+
     try {
         const elapsedSeconds = (currentTime - playbackStartTime) / 1000;
 
@@ -84,20 +110,20 @@ function updateLyricDisplay(currentTime) {
             for (let i = 1; i <= 3; i++) {
                 if (currentLyricIndex + i < currentSongTimecodes.length) {
                     nextLyrics.push(currentSongTimecodes[currentLyricIndex + i].text);
-                } else {
-                    nextLyrics.push(''); // Fill with empty if no more lyrics
                 }
             }
             updateLyrics(currentLyric, nextLyrics);
         }
 
-        // Continue animation if there are still lyrics to display
-        if (currentLyricIndex < currentSongTimecodes.length - 1) {
+        // Continue animation if playing and there are still lyrics to display
+        if (isPlaying && currentLyricIndex < currentSongTimecodes.length - 1) {
             animationFrameId = requestAnimationFrame(updateLyricDisplay);
         } else if (currentLyricIndex === currentSongTimecodes.length - 1 && !newLyricFound) {
             // If we are at the last lyric and it has been displayed, stop the animation
             cancelAnimationFrame(animationFrameId);
             animationFrameId = null;
+            isPlaying = false; // Automatically pause at the end
+            playPauseButton.textContent = 'Play';
         }
     } catch (error) {
         console.error("Error in updateLyricDisplay:", error);
@@ -108,13 +134,6 @@ function updateLyricDisplay(currentTime) {
 }
 
 // --- Song Management Logic ---
-// These variables and event listeners need to be initialized after DOM is loaded
-let songListElement;
-let uploadForm;
-let uploadStatus;
-let youtubeForm;
-let youtubeStatus;
-
 async function fetchSongs() {
     try {
         const response = await fetch('/songs');
@@ -201,6 +220,18 @@ async function deleteSong(songId) {
     }
 }
 
+function togglePlayPause() {
+    isPlaying = !isPlaying;
+    if (isPlaying) {
+        playPauseButton.textContent = 'Pause';
+        // Resume animation from where it left off
+        animationFrameId = requestAnimationFrame(updateLyricDisplay);
+    } else {
+        playPauseButton.textContent = 'Play';
+        // Animation will naturally pause because isPlaying is false
+    }
+}
+
 // Initial setup when the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', () => {
     songListElement = document.getElementById('song-list');
@@ -208,6 +239,10 @@ document.addEventListener('DOMContentLoaded', () => {
     uploadStatus = document.getElementById('upload-status');
     youtubeForm = document.getElementById('youtube-form');
     youtubeStatus = document.getElementById('youtube-status');
+    playPauseButton = document.getElementById('play-pause-button');
+
+    // Add event listener for Play/Pause button
+    playPauseButton.addEventListener('click', togglePlayPause);
 
     uploadForm.addEventListener('submit', async (event) => {
         event.preventDefault();

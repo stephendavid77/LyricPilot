@@ -1,0 +1,59 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background-color: #1a1a1a;
+    color: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    text-align: center;
+}
+
+.lyric-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 90%;
+    max-width: 1200px;
+}
+
+.lyric {
+    font-size: 4em;
+    font-weight: bold;
+    margin: 10px 0;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+    line-height: 1.2;
+}
+
+.lyric.current {
+    opacity: 1;
+    transform: translateY(0);
+    color: #ffffff;
+    font-size: 6em;
+}
+
+.lyric-queue {
+    margin-top: 30px;
+}
+
+.lyric.next-1 {
+    opacity: 0.7;
+    font-size: 3em;
+    transform: translateY(0);
+}
+
+.lyric.next-2 {
+    opacity: 0.4;
+    font-size: 2em;
+    transform: translateY(0);
+}
+
+.lyric.next-3 {
+    opacity: 0.2;
+    font-size: 1.5em;
+    transform: translateY(0);
+}

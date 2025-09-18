@@ -13,6 +13,11 @@ let youtubeForm;
 let youtubeStatus;
 let playPauseButton;
 
+// Progress bar elements
+let progressBar;
+let currentTimeDisplay;
+let totalDurationDisplay;
+
 const websocket = new WebSocket("ws://localhost:8000/ws"); // Adjust if your backend is on a different host/port
 
 let currentSongTimecodes = [];
@@ -21,6 +26,7 @@ let playbackStartTime = 0;
 let animationFrameId = null;
 let isPlaying = true; // New state variable
 let lastFrameTime = 0; // To calculate elapsed time during pause/resume
+let totalSongDuration = 0; // Total duration of the current song
 
 // --- WebSocket Logic ---
 websocket.onopen = (event) => {
@@ -41,6 +47,21 @@ websocket.onmessage = (event) => {
             currentSongTimecodes = timecodes.sort((a, b) => a.time - b.time);
             currentLyricIndex = -1;
             
+            // Calculate total song duration
+            totalSongDuration = currentSongTimecodes.length > 0 ? currentSongTimecodes[currentSongTimecodes.length - 1].time : 0;
+            // Add a buffer to total duration if needed, or assume last timecode is end
+            if (currentSongTimecodes.length > 0) {
+                // Estimate duration of the last line and add it
+                const lastLyricTime = currentSongTimecodes[currentSongTimecodes.length - 1].time;
+                const secondLastLyricTime = currentSongTimecodes.length > 1 ? currentSongTimecodes[currentSongTimecodes.length - 2].time : 0;
+                const estimatedLastLineDuration = lastLyricTime - secondLastLyricTime; // Simple estimate
+                totalSongDuration = lastLyricTime + estimatedLastLineDuration; // Add estimated duration of last line
+            }
+
+            // Initialize progress bar
+            progressBar.max = totalSongDuration;
+            totalDurationDisplay.textContent = formatTime(totalSongDuration);
+
             // Reset playback state and start/resume
             isPlaying = true;
             playPauseButton.textContent = 'Pause';
@@ -83,8 +104,9 @@ function updateLyrics(currentLyric, nextLyrics) {
 
 function updateLyricDisplay(currentTime) {
     if (!isPlaying) {
-        lastFrameTime = currentTime; // Update lastFrameTime when paused
-        animationFrameId = requestAnimationFrame(updateLyricDisplay); // Keep requesting frames to check for resume
+        // If paused, just update lastFrameTime and request next frame to check for resume
+        lastFrameTime = currentTime;
+        animationFrameId = requestAnimationFrame(updateLyricDisplay);
         return;
     }
 
@@ -116,21 +138,77 @@ function updateLyricDisplay(currentTime) {
             updateLyrics(currentLyric, nextLyrics);
         }
 
+        // Update progress bar
+        updateProgressBar(elapsedSeconds);
+
         // Continue animation if playing and there are still lyrics to display
-        if (isPlaying && currentLyricIndex < currentSongTimecodes.length - 1) {
+        if (isPlaying && elapsedSeconds < totalSongDuration) { // Continue until total duration
             animationFrameId = requestAnimationFrame(updateLyricDisplay);
-        } else if (currentLyricIndex === currentSongTimecodes.length - 1 && !newLyricFound) {
-            // If we are at the last lyric and it has been displayed, stop the animation
+        } else if (elapsedSeconds >= totalSongDuration) { // End of song
             cancelAnimationFrame(animationFrameId);
             animationFrameId = null;
             isPlaying = false; // Automatically pause at the end
             playPauseButton.textContent = 'Play';
+            updateProgressBar(totalSongDuration); // Set to end
         }
     } catch (error) {
         console.error("Error in updateLyricDisplay:", error);
         if (animationFrameId) {
             cancelAnimationFrame(animationFrameId);
         }
+    }
+}
+
+// --- Progress Bar Logic ---
+function formatTime(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    const paddedMinutes = String(minutes).padStart(2, '0');
+    const paddedSeconds = String(remainingSeconds).padStart(2, '0');
+    return `${paddedMinutes}:${paddedSeconds}`;
+}
+
+function updateProgressBar(elapsedSeconds) {
+    progressBar.value = elapsedSeconds;
+    currentTimeDisplay.textContent = formatTime(elapsedSeconds);
+}
+
+function seekToTime(newTimeSeconds) {
+    // Stop current animation
+    if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+    }
+
+    // Adjust playbackStartTime to simulate starting from newTimeSeconds
+    playbackStartTime = performance.now() - (newTimeSeconds * 1000);
+    lastFrameTime = performance.now(); // Reset lastFrameTime for accurate delta calculation
+
+    // Find the correct lyric index for the new time
+    currentLyricIndex = -1; // Reset to re-find from beginning
+    for (let i = 0; i < currentSongTimecodes.length; i++) {
+        if (newTimeSeconds >= currentSongTimecodes[i].time) {
+            currentLyricIndex = i;
+        } else {
+            break;
+        }
+    }
+
+    // Update lyrics display immediately
+    const currentLyric = currentSongTimecodes[currentLyricIndex] ? currentSongTimecodes[currentLyricIndex].text : '';
+    const nextLyrics = [];
+    for (let i = 1; i <= 3; i++) {
+        if (currentLyricIndex + i < currentSongTimecodes.length) {
+            nextLyrics.push(currentSongTimecodes[currentLyricIndex + i].text);
+        }
+    }
+    updateLyrics(currentLyric, nextLyrics);
+
+    // Update progress bar UI
+    updateProgressBar(newTimeSeconds);
+
+    // Resume playback if it was playing
+    if (isPlaying) {
+        animationFrameId = requestAnimationFrame(updateLyricDisplay);
     }
 }
 
@@ -242,8 +320,23 @@ document.addEventListener('DOMContentLoaded', () => {
     youtubeStatus = document.getElementById('youtube-status');
     playPauseButton = document.getElementById('play-pause-button');
 
+    // Progress bar elements
+    progressBar = document.getElementById('progress-bar');
+    currentTimeDisplay = document.getElementById('current-time');
+    totalDurationDisplay = document.getElementById('total-duration');
+
     // Add event listener for Play/Pause button
     playPauseButton.addEventListener('click', togglePlayPause);
+
+    // Add event listeners for progress bar seeking
+    progressBar.addEventListener('input', (event) => {
+        // Update current time display while dragging
+        currentTimeDisplay.textContent = formatTime(event.target.value);
+    });
+    progressBar.addEventListener('change', (event) => {
+        // Seek to the new time when dragging stops
+        seekToTime(parseFloat(event.target.value));
+    });
 
     uploadForm.addEventListener('submit', async (event) => {
         event.preventDefault();

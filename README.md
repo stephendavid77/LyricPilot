@@ -5,6 +5,7 @@ LyricPilot is a modular Python project designed for real-time display of lyrics,
 ## Functionality Overview
 
 -   **Song Upload & Preprocessing:** Supports uploading audio (MP3/WAV), MIDI, MusicXML, or plain text lyrics. Automatically detects file type and initiates processing to generate a standard `timecode.json` for each song.
+-   **PDF Song Chart Processing:** Extracts text from PDF, parses song structure (sections, repeats), and calculates timecodes based on BPM, including individual lyric lines. Section labels are used for timing but are not included in the final lyric output.
 -   **MIDI Processing:** Implemented to parse MIDI files and extract timecodes for note/rest onsets.
 -   **MusicXML Parsing:** Implemented to parse MusicXML files for precise timecode generation, including lyrics and timing from musical notation.
 -   **Real-Time Display:** A browser-based frontend displays current and upcoming lyric lines, updating in real-time via WebSockets.
@@ -103,6 +104,13 @@ When you upload a single file (audio, MIDI, MusicXML, or plain lyrics text), her
         *   This `timecode.json` is saved to `data/songs/<song_id>/timecode.json`.
         *   The song's status in the database is updated to `processed=True`.
 
+    *   **For PDF (`.pdf`) files:**
+        *   The file is saved.
+        *   **Important:** BPM is required for PDF processing. If not provided, the upload will fail.
+        *   The system extracts text from the PDF, parses the song structure (sections, repeats, and content), and calculates timecodes for individual lyric lines based on the provided BPM.
+        *   This `timecode.json` is saved to `data/songs/<song_id>/timecode.json`.
+        *   The song's status in the database is updated to `processed=True`.
+
 7.  **Final Database Update:** The song's entry in the SQLite database is updated with its final `processed` status and the path to the `timecode.json` (if one was generated).
 
 
@@ -141,5 +149,5 @@ Use the new `/play_song/{song_id}` endpoint to tell the backend which song to di
 
 -   **Backend:** Python, FastAPI, SQLAlchemy (SQLite), WebSockets
 -   **Frontend:** HTML, CSS, JavaScript
--   **Core Libraries:** `music21`
+-   **Core Libraries:** `music21`, `PyMuPDF`
 -   **Potential Libraries:** `librosa`, `mido`, `sounddevice`, `pyaudio`

@@ -250,11 +250,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const fileInput = document.getElementById('song-file');
         const titleInput = document.getElementById('song-title');
+        const bpmInput = document.getElementById('song-bpm'); // Get BPM input
 
         const formData = new FormData();
         formData.append('file', fileInput.files[0]);
         if (titleInput.value) {
             formData.append('title', titleInput.value);
+        }
+        // Only append BPM if it's a non-empty, valid number
+        if (bpmInput.value && !isNaN(parseFloat(bpmInput.value))) {
+            console.log("Sending BPM:", parseFloat(bpmInput.value)); // Debug log
+            formData.append('bpm', parseFloat(bpmInput.value)); 
+        } else {
+            console.log("BPM input is empty or invalid, not sending."); // Debug log
         }
 
         try {
@@ -268,6 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 uploadStatus.textContent = `Upload successful: ${result.title} (ID: ${result.song_id})`;
                 fileInput.value = ''; // Clear file input
                 titleInput.value = ''; // Clear title input
+                bpmInput.value = ''; // Clear BPM input
                 fetchSongs(); // Refresh song list
             } else {
                 uploadStatus.textContent = `Upload failed: ${result.detail || response.statusText}`;

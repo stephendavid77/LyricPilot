@@ -3,8 +3,9 @@ import shutil
 import asyncio
 from typing import List, Optional
 from pathlib import Path
+from uuid import uuid4
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException, UploadFile, File
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import HTMLResponse
 from starlette.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
@@ -69,7 +70,6 @@ The hour I first believed.
             {"time": 23.0, "text": "The hour I first believed."},
         ]
         timecode_data = TimecodeData(timecodes=[TimecodeEntry(**tc) for tc in example_timecodes])
-        timecode_json_path = os.path.join(song_dir, "timecode.json")
         save_timecode_json(timecode_json_path, timecode_data)
 
         add_song(
@@ -92,11 +92,13 @@ async def get_frontend():
 @app.post("/songs", response_model=dict)
 async def upload_song_endpoint(
     file: UploadFile = File(...),
-    title: Optional[str] = None,
+    title: Optional[str] = Form(None),
+    bpm: Optional[float] = Form(None),
     db: Session = Depends(get_db)
 ):
+    print(f"Received BPM in upload_song_endpoint: {bpm}") # Debug log
     try:
-        song = await upload_and_process_song(db, file, title)
+        song = await upload_and_process_song(db, file, title, bpm)
         return {"message": "Song uploaded and processing initiated", "song_id": song.id, "title": song.title}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to upload song: {e}")

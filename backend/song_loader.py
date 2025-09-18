@@ -19,8 +19,10 @@ from .structure_timecode_generator import generate_timecodes_from_structure
 # Placeholder imports for other aligners/parsers
 # from .audio_aligner import process_audio_file
 
-async def upload_and_process_song(db, file: UploadFile, title: Optional[str] = None, bpm: Optional[float] = None):
+async def upload_and_process_song(db, file: UploadFile, title: Optional[str] = None, bpm: Optional[float] = None, measures_per_section: Optional[int] = None, beats_per_measure: Optional[int] = None):
     print(f"Received BPM in upload_and_process_song: {bpm}") # Debug log
+    print(f"Received Measures per Section in upload_and_process_song: {measures_per_section}") # Debug log
+    print(f"Received Beats per Measure in upload_and_process_song: {beats_per_measure}") # Debug log
     song_id = str(uuid4())
     if not title:
         title = Path(file.filename).stem.replace('_', ' ').title()
@@ -93,7 +95,7 @@ async def upload_and_process_song(db, file: UploadFile, title: Optional[str] = N
             
             pdf_text = extract_text_from_pdf(saved_file_path)
             song_structure = parse_song_structure(pdf_text)
-            timecode_data = generate_timecodes_from_structure(song_structure, bpm)
+            timecode_data = generate_timecodes_from_structure(song_structure, bpm, measures_per_section, beats_per_measure)
             save_timecode_json(timecode_path, timecode_data)
             processed = True
 

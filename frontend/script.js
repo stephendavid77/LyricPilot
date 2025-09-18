@@ -73,6 +73,7 @@ websocket.onerror = (error) => {
 
 // --- Lyric Display Logic ---
 function updateLyrics(currentLyric, nextLyrics) {
+    console.log("Updating lyrics:", currentLyric, currentLyricElement); // Debug log
     currentLyricElement.textContent = currentLyric || '';
 
     nextLyricElements.forEach((element, index) => {
@@ -87,13 +88,13 @@ function updateLyricDisplay(currentTime) {
         return;
     }
 
-    const deltaTime = currentTime - lastFrameTime; // Time elapsed since last frame
-    playbackStartTime += deltaTime; // Adjust playbackStartTime to account for paused time
-    lastFrameTime = currentTime; // Update lastFrameTime for next frame
+    // Calculate time elapsed since the song started, accounting for pauses
+    const elapsedSeconds = (currentTime - playbackStartTime) / 1000;
+    
+    // Update lastFrameTime for the next frame
+    lastFrameTime = currentTime;
 
     try {
-        const elapsedSeconds = (currentTime - playbackStartTime) / 1000;
-
         let newLyricFound = false;
         for (let i = currentLyricIndex + 1; i < currentSongTimecodes.length; i++) {
             if (elapsedSeconds >= currentSongTimecodes[i].time) {
@@ -251,6 +252,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const fileInput = document.getElementById('song-file');
         const titleInput = document.getElementById('song-title');
         const bpmInput = document.getElementById('song-bpm'); // Get BPM input
+        const measuresPerSectionInput = document.getElementById('measures-per-section'); // Get Measures per Section input
+        const beatsPerMeasureInput = document.getElementById('beats-per-measure'); // Get Beats per Measure input
 
         const formData = new FormData();
         formData.append('file', fileInput.files[0]);
@@ -263,6 +266,20 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('bpm', parseFloat(bpmInput.value)); 
         } else {
             console.log("BPM input is empty or invalid, not sending."); // Debug log
+        }
+        // Only append Measures per Section if it's a non-empty, valid number
+        if (measuresPerSectionInput.value && !isNaN(parseInt(measuresPerSectionInput.value))) {
+            console.log("Sending Measures per Section:", parseInt(measuresPerSectionInput.value)); // Debug log
+            formData.append('measures_per_section', parseInt(measuresPerSectionInput.value));
+        } else {
+            console.log("Measures per Section input is empty or invalid, not sending."); // Debug log
+        }
+        // Only append Beats per Measure if it's a non-empty, valid number
+        if (beatsPerMeasureInput.value && !isNaN(parseInt(beatsPerMeasureInput.value))) {
+            console.log("Sending Beats per Measure:", parseInt(beatsPerMeasureInput.value)); // Debug log
+            formData.append('beats_per_measure', parseInt(beatsPerMeasureInput.value));
+        } else {
+            console.log("Beats per Measure input is empty or invalid, not sending."); // Debug log
         }
 
         try {
@@ -277,6 +294,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 fileInput.value = ''; // Clear file input
                 titleInput.value = ''; // Clear title input
                 bpmInput.value = ''; // Clear BPM input
+                measuresPerSectionInput.value = ''; // Clear Measures per Section input
+                beatsPerMeasureInput.value = ''; // Clear Beats per Measure input
                 fetchSongs(); // Refresh song list
             } else {
                 uploadStatus.textContent = `Upload failed: ${result.detail || response.statusText}`;

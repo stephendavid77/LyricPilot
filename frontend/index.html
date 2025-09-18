@@ -13,11 +13,13 @@
 
             <h3>Upload New Song Artifact</h3>
             <p>Upload a single file for a new song. Accepted types: Audio (.mp3, .wav), MIDI (.mid, .midi), MusicXML (.xml, .musicxml), or plain lyrics text (.txt).</p>
-            <p>For PDF song charts, BPM is required.</p>
+            <p>For PDF song charts, BPM is required. Measures per section and beats per measure are optional but recommended for accurate timing.</p>
             <form id="upload-form" enctype="multipart/form-data">
                 <input type="file" id="song-file" name="file" required>
                 <input type="text" id="song-title" name="title" placeholder="Song Title (optional)">
                 <input type="number" id="song-bpm" name="bpm" placeholder="BPM (for PDF)" min="1">
+                <input type="number" id="measures-per-section" name="measures_per_section" placeholder="Measures per Section (e.g., 4)" min="1">
+                <input type="number" id="beats-per-measure" name="beats_per_measure" placeholder="Beats per Measure (e.g., 4 for 4/4)" min="1">
                 <button type="submit">Upload Song</button>
             </form>
             <p id="upload-status"></p>

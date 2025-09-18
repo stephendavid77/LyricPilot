@@ -94,11 +94,15 @@ async def upload_song_endpoint(
     file: UploadFile = File(...),
     title: Optional[str] = Form(None),
     bpm: Optional[float] = Form(None),
+    measures_per_section: Optional[int] = Form(None),
+    beats_per_measure: Optional[int] = Form(None),
     db: Session = Depends(get_db)
 ):
     print(f"Received BPM in upload_song_endpoint: {bpm}") # Debug log
+    print(f"Received Measures per Section in upload_song_endpoint: {measures_per_section}") # Debug log
+    print(f"Received Beats per Measure in upload_song_endpoint: {beats_per_measure}") # Debug log
     try:
-        song = await upload_and_process_song(db, file, title, bpm)
+        song = await upload_and_process_song(db, file, title, bpm, measures_per_section, beats_per_measure)
         return {"message": "Song uploaded and processing initiated", "song_id": song.id, "title": song.title}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to upload song: {e}")
